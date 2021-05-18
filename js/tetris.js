@@ -1,5 +1,10 @@
+import BLOCKS from "./blocks.js"
+
 // DOM
 const playground = document.querySelector(".playground > ul");
+const gameText = document.querySelector(".game-text");
+const scoredisplay = document.querySelector(".score");
+const restartButton = document.querySelector(".game-text > button")
 
 
 // Setting
@@ -12,24 +17,10 @@ let score = 0;
 let duration = 500;
 let downInterval;
 let tempMovingItem;
-
-const BLOCKS = {
-    tree: [
-        [[2,1],[0,1],[1,0],[1,1]],
-        [[1,2],[0,1],[1,0],[1,1]],
-        [[1,2],[0,1],[2,1],[1,1]],
-        [[2,1],[1,2],[1,0],[1,1]],
-    ],
-    square: [
-        [[2,1],[0,1],[1,0],[1,1]],
-        [[1,2],[0,1],[1,0],[1,1]],
-        [[1,2],[0,1],[2,1],[1,1]],
-        [[2,1],[1,2],[1,0],[1,1]],
-    ]
-}
+ 
 
 const movingItem = {
-    type: "tree",
+    type: "",
     direction: 3,
     top: 0,
     left: 0,
@@ -44,15 +35,15 @@ init()
 function init(){
     const blockArray = Object.entries(BLOCKS);
     const randomIndex = Math.floor(Math.random() * blockArray.length)
-    console.log(blockArray)
+    blockArray[randomIndex][0]
     blockArray.forEach(block=>{
-        console.log(block)
+        console.log(block[0])
     })
-    tempMovingItem = { ...movingItem};
-    for(let i=0; i < GAME_ROWS; i++) {
-        prependNewLine()
-    }
-    renderBlocks()
+   tempMovingItem = { ...movingItem};
+   for(let i=0; i < GAME_ROWS; i++) {
+       prependNewLine()
+   }
+   generateNewBlock()
 }
 
 function prependNewLine(){
@@ -72,6 +63,7 @@ function renderBlocks(moveType="") {
     movingBlocks.forEach(moving=>{
         moving.classList.remove(type, "moving");
     })
+
     BLOCKS[type][direction].some(block => {
         const x = block[0] + left;
         const y = block[1] + top;
@@ -81,8 +73,12 @@ function renderBlocks(moveType="") {
             target.classList.add(type, "moving")
         } else {
             tempMovingItem = { ...movingItem }
-            setTimeout(()=>{
-                renderBlocks(); 
+            if(moveType === 'retry'){
+                clearInterval(downInterval);
+                showGameoverText();
+            }
+            setTimeout(() => {
+                renderBlocks('retry'); 
                 if(moveType ==="top"){
                     seizeBlock();
                 }
@@ -91,6 +87,7 @@ function renderBlocks(moveType="") {
         }
         
     })
+    
     movingItem.left = left;
     movingItem.top = top;
     movingItem.direction = direction;
@@ -101,10 +98,37 @@ function seizeBlock(){
         moving.classList.remove("moving");
         moving.classList.add("seized");
     })
+    checkMatch()
+}
+function checkMatch(){
+
+    const childNodes = playground.childNodes;
+    childNodes.forEach(child=>{
+        let matched = true;
+        child.children[0].childNodes.forEach(li=>{
+            if(!li.classList.contains("seized")){
+                matched = false;
+            }
+        })
+        if(matched){
+            child.remove(); 
+            prependNewLine();
+            score++;
+            scoredisplay.innerHTML = score;
+        }
+    })
+
     generateNewBlock()
 }
 function generateNewBlock(){
-    movingItem.type = ""
+    clearInterval(downInterval);
+    downInterval = setInterval(()=>{
+        moveBlock('top',1)
+    },duration)
+
+    const blockArray = Object.entries(BLOCKS);
+    const randomIndex = Math.floor(Math.random() * blockArray.length)
+    movingItem.type = blockArray[randomIndex][0]
     movingItem.top = 0;
     movingItem.left = 3;
     movingItem.direction = 0;
@@ -129,6 +153,16 @@ function changeDirection(){
     renderBlocks()
 }
 
+function dropBlock(){
+    clearInterval(downInterval);
+    downInterval = setInterval(()=>{
+        moveBlock("top",1)
+    },10)
+}
+
+function showGameoverText(){
+    gameText.style.display = "flex"
+}
 // event handling
 document.addEventListener("keydown", e => {
     switch (e.keyCode){
@@ -144,8 +178,16 @@ document.addEventListener("keydown", e => {
         case 38:
             changeDirection();
             break;
+        case 32:
+            dropBlock();
+            break;
         default:
             break;
     }
-    console.log(e)
+})
+
+restartButton.addEventListener("click", ()=>{
+    playground.innerHTML = "";
+    gameText.style.display = "none";
+    init()
 })
